@@ -62,19 +62,25 @@ export interface ScoutReportContext {
 
 /** Plain-text scout report. */
 export function formatScoutReport(ctx: ScoutReportContext): string {
-  const lines = [`🛰 SCOUT REPORT · ${ctx.targetName.toUpperCase()} (${ctx.defenderName})${ctx.coords ? ` · ${ctx.coords}` : ''}`, ''];
+  const lines = [...wrap(`🛰 SCOUT REPORT · ${ctx.targetName.toUpperCase()}`, 2), `${ctx.defenderName}${ctx.coords ? ` · ${ctx.coords}` : ''}`, ''];
   if (ctx.perspective === 'defender') {
-    lines.push(ctx.success
+    lines.push(...wrap(ctx.success
       ? `${ctx.attackerName}'s Wisp Drones slipped past your sensors and scouted your base.`
-      : `Your Sensor Array spotted ${ctx.attackerName}'s Wisp Drones and shot them all down.`);
+      : `Your Sensor Array spotted ${ctx.attackerName}'s Wisp Drones and shot them all down.`, 0));
     return lines.join('\n');
   }
   if (!ctx.success || !ctx.intel) {
-    lines.push('Your Wisp Drones were shot down before they saw anything.', 'Send more Wisps than twice their Sensor Array level, plus their own Wisps.');
+    lines.push(
+      ...wrap('Your Wisp Drones were shot down before they saw anything.', 0),
+      '',
+      ...wrap('Send more Wisps than twice their Sensor Array level, plus their own Wisps.', 0),
+    );
     return lines.join('\n');
   }
   const { resources, units, levels } = ctx.intel;
-  lines.push(`RESOURCES  ${RESOURCES.map((k) => `${fmt(resources[k])} ${LOOT_NAMES[k][1]}`).join(' · ')}`, '');
+  lines.push('RESOURCES');
+  for (const k of RESOURCES) lines.push(`  ${pad(LOOT_NAMES[k][1], W_SCOUT)}${padL(fmt(resources[k]), 10)}`);
+  lines.push('');
   lines.push('UNITS AT HOME');
   const home = COMBATANT_KEYS.filter((k) => units[k]);
   for (const k of home) lines.push(`  ${pad(COMBATANTS[k].name, W_SCOUT)}${padL(fmt(units[k]!), 6)}`);
@@ -88,71 +94,96 @@ export function formatScoutReport(ctx: ScoutReportContext): string {
 }
 
 
+/** Reports are read on phones: keep lines to about this many monospaced characters. */
+export const REPORT_WIDTH = 44;
+
+/** Wraps `text` at word boundaries, keeping its leading indent and indenting continuation lines. */
+function wrap(text: string, indent = 4, width = REPORT_WIDTH): string[] {
+  const lead = text.match(/^ */)![0];
+  const out: string[] = [];
+  let line = lead;
+  for (const word of text.trimStart().split(' ')) {
+    if (line.trim() && (line + ' ' + word).length > width) {
+      out.push(line);
+      line = ' '.repeat(indent) + word;
+    } else {
+      line = line.trim() ? `${line} ${word}` : line + word;
+    }
+  }
+  if (line.trim()) out.push(line);
+  return out;
+}
+
 /** Plain-text battle report, as shown in the Reports inbox. */
 export function formatBattleReport(result: BattleResult, ctx: ReportContext): string {
   const mine = ctx.perspective;
   const who = (side: 'attacker' | 'defender') => (side === mine ? 'You' : 'They');
   const lines: string[] = [];
-  const W = 22;
+  const W = 20;
 
-  lines.push(`⚔ RAID ON ${ctx.targetName.toUpperCase()} (${ctx.defenderName})${ctx.coords ? ` · ${ctx.coords}` : ''}`);
+  lines.push(...wrap(`⚔ RAID ON ${ctx.targetName.toUpperCase()}`, 2));
+  lines.push(`${ctx.defenderName}${ctx.coords ? ` · ${ctx.coords}` : ''}`);
   const n = result.rounds.length;
-  lines.push(`${HEADLINE[mine][result.outcome]} · ${n} round${n === 1 ? '' : 's'}${ctx.when ? ` · ${ctx.when}` : ''}`);
+  lines.push(`${HEADLINE[mine][result.outcome]} · ${n} round${n === 1 ? '' : 's'}`);
+  if (ctx.when) lines.push(ctx.when);
   lines.push('');
 
-  lines.push(`${pad(mine === 'attacker' ? 'YOUR FORCE' : 'ATTACKERS', W)}${padL('SENT', 6)}${padL('LOST', 7)}`);
+  lines.push(`${pad(mine === 'attacker' ? 'YOUR FORCE' : 'ATTACKERS', W)}${padL('SENT', 6)}${padL('LOST', 6)}`);
   for (const key of COMBATANT_KEYS) {
     const sent = result.attacker.sent[key];
     if (!sent) continue;
-    lines.push(`${pad(COMBATANTS[key].name, W)}${padL(fmt(sent), 6)}${padL(fmt(result.attacker.lost[key] ?? 0), 7)}`);
+    lines.push(`${pad(COMBATANTS[key].name, W)}${padL(fmt(sent), 6)}${padL(fmt(result.attacker.lost[key] ?? 0), 6)}`);
   }
   lines.push('');
 
-  lines.push(`${pad(mine === 'defender' ? 'YOUR DEFENDERS' : 'DEFENDERS', W)}${padL('HOME', 6)}${padL('LOST', 7)}`);
+  lines.push(`${pad(mine === 'defender' ? 'YOUR DEFENDERS' : 'DEFENDERS', W)}${padL('HOME', 6)}${padL('LOST', 6)}`);
   for (const key of COMBATANT_KEYS) {
     const home = result.defender.home[key];
     if (!home) continue;
+    lines.push(`${pad(COMBATANTS[key].name, W)}${padL(fmt(home), 6)}${padL(fmt(result.defender.lost[key] ?? 0), 6)}`);
     const fixed = ctx.repaired?.[key];
-    const note = fixed ? `   (${fixed} patched up by Repair Bay)` : '';
-    lines.push(`${pad(COMBATANTS[key].name, W)}${padL(fmt(home), 6)}${padL(fmt(result.defender.lost[key] ?? 0), 7)}${note}`);
+    if (fixed) lines.push(`  +${fixed} patched up by Repair Bay`);
   }
   for (const key of TURRET_TYPES) {
     const level = result.defenses[key];
     if (!level) continue;
-    const state = result.defender.turretsKnockedOut.includes(key) ? 'knocked out' : 'held';
-    lines.push(`${pad(`${BUILDINGS[key].name} L${level}`, W)}${padL('—', 6)}   ${state}`);
+    lines.push(`${pad(`${BUILDINGS[key].name} L${level}`, W)}  ${result.defender.turretsKnockedOut.includes(key) ? 'knocked out' : 'held'}`);
   }
   const wall = result.defenses.perimeterWall;
   if (wall) {
     const r = result.wallBreachedInRound;
-    lines.push(`${pad(`Perimeter Wall L${wall}`, W)}${padL('—', 6)}   ${r ? `breached in round ${r}` : 'held'}`);
+    lines.push(`${pad(`Perimeter Wall L${wall}`, W)}  ${r ? `breached in round ${r}` : 'held'}`);
   }
   const shield = result.defenses.shieldGenerator;
   if (shield) {
     const absorbed = result.rounds.reduce((s, r) => s + r.shieldAbsorbed, 0);
-    lines.push(`${pad(`Shield Generator L${shield}`, W)}${padL('—', 6)}   absorbed ${fmt(absorbed)}`);
+    lines.push(`${pad(`Shield Generator L${shield}`, W)}  absorbed ${fmt(absorbed)}`);
   }
   lines.push('');
 
   if (result.outcome === 'attacker' && ctx.loot) {
-    const total = RESOURCES.reduce((s, k) => s + ctx.loot![k], 0);
-    lines.push(`${mine === 'attacker' ? 'LOOT' : 'STOLEN'}   ${listResources(ctx.loot)}`);
-    if (ctx.carry !== undefined) lines.push(`       (carry ${fmt(total)} / ${fmt(ctx.carry)})`);
+    const label = mine === 'attacker' ? 'LOOT' : 'STOLEN';
+    const parts = RESOURCES.filter((k) => ctx.loot![k] > 0).map((k) => `${fmt(ctx.loot![k])} ${LOOT_NAMES[k][ctx.loot![k] === 1 ? 0 : 1]}`);
+    if (!parts.length) parts.push('nothing');
+    parts.forEach((part, i) => lines.push(`${pad(i === 0 ? label : '', 8)}${part}`));
+    if (ctx.carry !== undefined) {
+      const total = RESOURCES.reduce((s, k) => s + ctx.loot![k], 0);
+      lines.push(`${pad('', 8)}carry ${fmt(total)} / ${fmt(ctx.carry)}`);
+    }
   } else if (mine === 'attacker') {
     lines.push('No loot.');
   }
-  if (mine === 'defender' && ctx.salvage) lines.push(`SALVAGE  +${fmt(ctx.salvage)} Alloy from the wreckage`);
+  if (mine === 'defender' && ctx.salvage) lines.push(`SALVAGE +${fmt(ctx.salvage)} Alloy from the wreckage`);
   lines.push('');
 
   for (const r of result.rounds) {
-    const extras: string[] = [];
-    if (r.shieldAbsorbed > 0) extras.push(`+${fmt(r.shieldAbsorbed)} absorbed by the shield`);
-    if (r.wallDamage > 0) extras.push(`+${fmt(r.wallDamage)} into the wall`);
-    const guard = extras.length ? ` (${extras.join(', ')})` : '';
-    lines.push(
-      `R${r.round}  ${who('attacker')} deal ${fmt(r.attackerDamage)}${guard}; ${who('defender')} deal ${fmt(r.defenderDamage)}.`,
-    );
-    lines.push(`    Defenders lose ${listLosses(r.defenderLosses)}. Attackers lose ${listLosses(r.attackerLosses)}.`);
+    lines.push(`R${r.round}  ${who('attacker')} deal ${fmt(r.attackerDamage)}, ${who('defender').toLowerCase()} deal ${fmt(r.defenderDamage)}.`);
+    const guard: string[] = [];
+    if (r.shieldAbsorbed > 0) guard.push(`shield soaks ${fmt(r.shieldAbsorbed)}`);
+    if (r.wallDamage > 0) guard.push(`wall soaks ${fmt(r.wallDamage)}`);
+    if (guard.length) lines.push(`    ${guard.join(' · ')}`);
+    lines.push(...wrap(`    Defenders lose ${listLosses(r.defenderLosses)}.`, 6));
+    lines.push(...wrap(`    Attackers lose ${listLosses(r.attackerLosses)}.`, 6));
   }
   return lines.join('\n');
 }

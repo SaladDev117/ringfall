@@ -16,14 +16,14 @@ describe('formatBattleReport', () => {
       perspective: 'attacker', attackerName: 'Vex', defenderName: 'dave', targetName: 'Iron Hollow',
       coords: 'S14 · 852, 18', loot: res(2400, 1340, 1), carry: 3755, repaired: { trooper: 2 },
     });
-    expect(text).toContain('⚔ RAID ON IRON HOLLOW (dave) · S14 · 852, 18');
+    expect(text).toContain('⚔ RAID ON IRON HOLLOW\ndave · S14 · 852, 18');
     expect(text).toContain('VICTORY');
     expect(text).toMatch(/YOUR FORCE\s+SENT\s+LOST/);
     expect(text).toMatch(/Trooper\s+40/);
-    expect(text).toContain('(2 patched up by Repair Bay)');
+    expect(text).toContain('+2 patched up by Repair Bay');
     expect(text).toContain('Sentry Turret L2');
-    expect(text).toContain('LOOT   2,400 Alloy · 1,340 Plasma · 1 Relic Shard');
-    expect(text).toContain('(carry 3,741 / 3,755)');
+    expect(text).toMatch(/LOOT {4}2,400 Alloy\n {8}1,340 Plasma\n {8}1 Relic Shard\n {8}carry 3,741 \/ 3,755/);
+    for (const line of text.split('\n')) expect(line.length, line).toBeLessThanOrEqual(44);
     expect(text).toMatch(/^R1 {2}You deal/m);
   });
 
@@ -35,7 +35,7 @@ describe('formatBattleReport', () => {
     expect(text).toContain('RAIDED');
     expect(text).toContain('YOUR DEFENDERS');
     expect(text).toContain('STOLEN');
-    expect(text).toContain('SALVAGE  +104 Alloy');
+    expect(text).toContain('SALVAGE +104 Alloy');
     expect(text).toMatch(/^R1 {2}They deal/m);
   });
 });

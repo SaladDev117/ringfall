@@ -8,7 +8,7 @@ The full design is in **[docs/spec.md](docs/spec.md)**.
 ## Layout
 ```
 packages/rules/   game numbers, formulas and the battle simulator (shared by app and server)
-apps/mobile/      Expo app (milestone M1+)
+apps/mobile/      Expo app (iOS, Android, web): base, building, training, map, armies, reports
 apps/server/      Node API (Fastify + Drizzle + Postgres): accounts, bases, training, map, armies, battles, reports
 neon.ts           Neon project policy (project `ringfall`, branch `production`)
 ```
@@ -25,6 +25,18 @@ pnpm db:sql "select now()"
 TEST_DATABASE_URL=postgres://postgres@127.0.0.1:5432/postgres pnpm test   # also runs the server integration tests
 pnpm sim "40 trooper, 10 rattler, 3 mule" vs "12 trooper, 2 breacher, sentry:2, wall:1" --runs 1000
 ```
+
+## Play it on your phone
+1. Start the server on your computer: `pnpm install && pnpm dev` (port 3000, uses the Neon database from `.env.local`).
+2. Find your computer's local IP (e.g. `192.168.1.20`), then start the app:
+   ```bash
+   cd apps/mobile
+   EXPO_PUBLIC_API_URL=http://192.168.1.20:3000 npx expo start
+   ```
+3. Scan the QR code with **Expo Go** (App Store / Play Store) on a phone on the same Wi-Fi.
+   Press `w` instead to open it in a browser.
+
+Push notifications need a development build and an EAS project (`npx eas-cli init`); everything else works in Expo Go.
 
 ## How the server works
 - Every base's changing state (resources, levels, units, build and training queues) lives in its `bases` row.

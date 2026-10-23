@@ -1,3 +1,4 @@
+import cors from '@fastify/cors';
 import Fastify, { type FastifyInstance } from 'fastify';
 import { ZodError } from 'zod';
 import { AttemptLimiter, TokenService } from './auth.js';
@@ -12,6 +13,8 @@ export interface AppOptions {
 
 export function buildApp(db: Db, opts: AppOptions = { jwtSecret: 'test' }): FastifyInstance {
   const app = Fastify({ logger: { level: process.env.LOG_LEVEL ?? 'info' }, trustProxy: true });
+  // Native apps don't need CORS; the web build does. Auth is a bearer token, not a cookie, so any origin is safe.
+  app.register(cors, { origin: true, methods: ['GET', 'POST', 'PATCH', 'DELETE'] });
 
   app.setErrorHandler((err, req, reply) => {
     if (err instanceof GameError) return reply.code(err.status).send({ error: err.code, message: err.message });

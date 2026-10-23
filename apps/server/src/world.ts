@@ -99,8 +99,10 @@ function randomNestLevel(): number {
   return 1;
 }
 
-export async function spawnNest(tx: Tx, seasonId: number, sector: number, activeAt: Date, level = randomNestLevel()): Promise<void> {
-  const p = await freeTile(tx, seasonId, sector);
+export async function spawnNest(
+  tx: Tx, seasonId: number, sector: number, activeAt: Date, level = randomNestLevel(), near?: R.Point,
+): Promise<void> {
+  const p = await freeTile(tx, seasonId, sector, near);
   await tx.insert(nests).values({
     seasonId, sector, x: p.x, y: p.y, level, garrison: R.nestGarrison(level), garrisonAt: activeAt, activeAt,
   });
@@ -156,6 +158,8 @@ export async function spawnBase(
     resources: s.resources, resourcesAt: new Date(now), levels: s.levels, units: s.units, builds: [], training: [],
     joinedAt: new Date(now), seasonDayAtJoin: day, power: R.power(s.levels, s.units),
   }).returning();
+  // A level 1 nest a few tiles away, so a new commander's first raid is a short walk.
+  await spawnNest(tx, season.id, sector, new Date(now), 1, tile);
   await ensureNests(tx, season.id, sector, now);
   return row!;
 }

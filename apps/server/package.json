@@ -14,6 +14,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@fastify/cors": "^11.3.1",
     "@neondatabase/serverless": "1.2.0",
     "@node-rs/argon2": "2.2.2",
     "@ringfall/rules": "workspace:*",
