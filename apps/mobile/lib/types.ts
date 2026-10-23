@@ -63,6 +63,7 @@ export interface BaseView {
   maxArmiesOut: number;
   incoming: IncomingView[];
   unreadReports: number;
+  social: { friendRequests: number; unreadMessages: number };
 }
 
 export type PlaceView =
@@ -102,5 +103,45 @@ export interface ReportSummary {
 
 export interface ReportDetail extends Omit<ReportSummary, 'seen'> {
   text: string;
+  /** A friend shared it with you. */
+  shared: boolean;
   data: { loot?: Resources; attackerName: string; defenderName: string; targetName: string; coords: string };
+}
+
+export interface FriendView {
+  userId: string;
+  username: string;
+  lastSeenAt: number | null;
+  base: { id: string; name: string; x: number; y: number; coords: string; power: number; shielded: boolean } | null;
+}
+
+/** GET /friends */
+export interface FriendsView {
+  friends: FriendView[];
+  incoming: { id: string; username: string; at: number }[];
+  outgoing: { id: string; username: string; at: number }[];
+}
+
+export interface ConversationView {
+  userId: string;
+  username: string;
+  lastMessageAt: number;
+  preview: string;
+  fromMe: boolean;
+  unread: number;
+}
+
+export interface MessageView {
+  id: string;
+  fromMe: boolean;
+  body: string;
+  at: number;
+  report: { id: string; title: string } | null;
+}
+
+/** GET /messages/:userId */
+export interface ThreadView {
+  username: string;
+  friends: boolean;
+  messages: MessageView[];
 }

@@ -204,4 +204,75 @@ describe.skipIf(!TEST_DATABASE_URL)('game server (needs TEST_DATABASE_URL)', () 
       expect((await alice.get('/base')).body.units.trooper).toBe(home);
     });
   });
+
+  describe('friends and messages', () => {
+    let carol: Player;
+    let dave: Player;
+    let erin: Player;
+    beforeAll(async () => {
+      carol = await register(t.app, 'carol');
+      dave = await register(t.app, 'dave', carol.user.inviteCode);
+      erin = await register(t.app, 'erin');
+    });
+
+    it('signing up with an invite code sends the inviter a friend request', async () => {
+      const list = (await carol.get('/friends')).body;
+      expect(list.incoming).toHaveLength(1);
+      expect(list.incoming[0].username).toBe('dave');
+      expect((await carol.get('/base')).body.social.friendRequests).toBe(1);
+      expect((await carol.post(`/friends/requests/${list.incoming[0].id}/accept`)).body.status).toBe('friends');
+      const friends = (await dave.get('/friends')).body.friends;
+      expect(friends.map((f: any) => f.username)).toEqual(['carol']);
+      expect(friends[0].base.coords).toMatch(/^S\d+/);
+    });
+
+    it('requests by username can be declined, and mutual requests become friendships', async () => {
+      expect((await erin.post('/friends/requests', { username: 'CAROL' })).body.status).toBe('requested');
+      const req = (await carol.get('/friends')).body.incoming[0];
+      expect((await carol.post(`/friends/requests/${req.id}/decline`)).body.status).toBe('declined');
+      expect((await erin.post('/friends/requests', { username: 'nobody_here' })).status).toBe(404);
+      expect((await erin.post('/friends/requests', { username: 'erin' })).body.error).toBe('cannot_friend_self');
+      expect((await carol.post('/friends/requests', { username: 'dave' })).body.error).toBe('already_friends');
+
+      expect((await erin.post('/friends/requests', { username: 'dave' })).body.status).toBe('requested');
+      expect((await dave.post('/friends/requests', { code: erin.user.inviteCode })).body.status).toBe('friends');
+    });
+
+    it('friends can message each other, with unread counts and a word filter', async () => {
+      expect((await dave.post(`/messages/${carol.user.id}`, { body: 'hello neighbour' })).status).toBe(201);
+      expect((await dave.post(`/messages/${carol.user.id}`, { body: 'you fucking noob' })).body.body).toBe('you ******* noob');
+      const convos = (await carol.get('/conversations')).body;
+      expect(convos[0]).toMatchObject({ username: 'dave', unread: 2, preview: 'you ******* noob' });
+      expect((await carol.get('/base')).body.social.unreadMessages).toBe(2);
+      const thread = (await carol.get(`/messages/${dave.user.id}`)).body;
+      expect(thread.messages.map((m: any) => m.body)).toEqual(['you ******* noob', 'hello neighbour']);
+      expect((await carol.get('/conversations')).body[0].unread).toBe(0);
+      expect((await erin.post(`/messages/${carol.user.id}`, { body: 'hi' })).body.error).toBe('not_friends');
+      expect((await dave.post(`/messages/${carol.user.id}`, { body: '   ' })).body.error).toBe('empty_message');
+    });
+
+    it('shares a battle report with a friend', async () => {
+      const nest = (await dave.get('/map/nearby')).body.places.find((p: any) => p.kind === 'nest');
+      const launch = await dave.post('/armies', { target: { kind: 'nest', id: nest.id }, mission: 'raid', units: { trooper: 5 } });
+      await t.advance(launch.body.arrivesAt - Date.now() + 1000);
+      const report = (await dave.get('/reports')).body[0];
+      expect((await carol.get(`/reports/${report.id}`)).status).toBe(404);
+      expect((await dave.post(`/messages/${carol.user.id}`, { reportId: report.id })).status).toBe(201);
+      const thread = (await carol.get(`/messages/${dave.user.id}`)).body;
+      expect(thread.messages[0].report.id).toBe(report.id);
+      const shared = (await carol.get(`/reports/${report.id}`)).body;
+      expect(shared.shared).toBe(true);
+      expect(shared.text).toContain('RAID ON BLIGHT NEST');
+      expect((await erin.get(`/reports/${report.id}`)).status).toBe(404);
+    });
+
+    it('blocking ends the friendship and stops requests and messages', async () => {
+      expect((await carol.post(`/blocks/${dave.user.id}`)).status).toBe(200);
+      expect((await dave.get('/friends')).body.friends.map((f: any) => f.username)).toEqual(['erin']);
+      expect((await dave.post('/friends/requests', { username: 'carol' })).body.error).toBe('cannot_add');
+      expect((await dave.post(`/messages/${carol.user.id}`, { body: 'hey?' })).body.error).toBe('not_friends');
+      expect((await carol.post('/abuse-reports', { userId: dave.user.id, reason: 'spam' })).status).toBe(200);
+      expect((await carol.get('/blocks')).body.map((b: any) => b.username)).toEqual(['dave']);
+    });
+  });
 });

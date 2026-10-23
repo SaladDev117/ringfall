@@ -8,8 +8,8 @@ The full design is in **[docs/spec.md](docs/spec.md)**.
 ## Layout
 ```
 packages/rules/   game numbers, formulas and the battle simulator (shared by app and server)
-apps/mobile/      Expo app (iOS, Android, web): base, building, training, map, armies, reports
-apps/server/      Node API (Fastify + Drizzle + Postgres): accounts, bases, training, map, armies, battles, reports
+apps/mobile/      Expo app (iOS, Android, web): base, building, training, map, armies, reports, friends, messages
+apps/server/      Node API (Fastify + Drizzle + Postgres): accounts, bases, training, map, armies, battles, reports, social
 neon.ts           Neon project policy (project `ringfall`, branch `production`)
 ```
 

@@ -1,6 +1,8 @@
 import type { Army, BuildJob, BuildingType, TrainJob, UnitKey } from '@ringfall/rules';
 import { storage } from './storage';
-import type { BaseView, NearbyView, ReportDetail, ReportSummary, Session, User } from './types';
+import type {
+  BaseView, ConversationView, FriendsView, NearbyView, ReportDetail, ReportSummary, Session, ThreadView, User,
+} from './types';
 
 /** Set EXPO_PUBLIC_API_URL to your computer's LAN address (e.g. http://192.168.1.20:3000) to play on a phone. */
 export const API_URL = (process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000').replace(/\/$/, '');
@@ -116,6 +118,9 @@ export const ERRORS: Record<string, string> = {
   cannot_attack_self: 'That’s your own base.',
   already_arrived: 'Too late: that army already arrived.',
   target_not_found: 'That target is gone.',
+  not_friends: 'You can only message friends.',
+  cannot_add: 'You can’t add that commander.',
+  slow_down: 'Slow down a little.',
 };
 
 export const errorText = (e: unknown): string =>
@@ -162,4 +167,19 @@ export const api = {
   reports: () => request<ReportSummary[]>('GET', '/reports'),
   report: (id: string) => request<ReportDetail>('GET', `/reports/${id}`),
   registerPushToken: (token: string, platform: 'ios' | 'android' | 'web') => request('POST', '/push-tokens', { token, platform }),
+
+  friends: () => request<FriendsView>('GET', '/friends'),
+  addFriend: (nameOrCode: string) => {
+    const v = nameOrCode.trim();
+    const isCode = /^rf-?[a-z0-9]{5}$/i.test(v);
+    return request<{ status: 'requested' | 'friends'; username: string }>('POST', '/friends/requests', isCode ? { code: v } : { username: v });
+  },
+  answerRequest: (id: string, accept: boolean) => request('POST', `/friends/requests/${id}/${accept ? 'accept' : 'decline'}`),
+  removeFriend: (userId: string) => request('DELETE', `/friends/${userId}`),
+  block: (userId: string) => request('POST', `/blocks/${userId}`),
+  reportUser: (userId: string, reason: string, messageId?: string) => request('POST', '/abuse-reports', { userId, reason, messageId }),
+  conversations: () => request<ConversationView[]>('GET', '/conversations'),
+  thread: (userId: string) => request<ThreadView>('GET', `/messages/${userId}`),
+  sendMessage: (userId: string, body: string) => request('POST', `/messages/${userId}`, { body }),
+  shareReport: (userId: string, reportId: string) => request('POST', `/messages/${userId}`, { reportId }),
 };

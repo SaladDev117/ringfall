@@ -12,11 +12,13 @@ import { colors } from '@/lib/theme';
 import { Button, Card, Divider, ErrorText, Loading, Row, Screen, SectionTitle, Stepper, T } from '@/lib/ui';
 
 export default function SendScreen() {
-  const params = useLocalSearchParams<{ kind: 'base' | 'nest'; id: string; name: string; x: string; y: string; level?: string }>();
+  const params = useLocalSearchParams<{
+    kind: 'base' | 'nest'; id: string; name: string; x: string; y: string; level?: string; mission?: 'raid' | 'scout';
+  }>();
   const { data: base } = useBase();
   const now = useNow();
   const qc = useQueryClient();
-  const [mission, setMission] = useState<'raid' | 'scout'>('raid');
+  const [mission, setMission] = useState<'raid' | 'scout'>(params.mission === 'scout' ? 'scout' : 'raid');
   const [picked, setPicked] = useState<R.Army>({});
   const launch = useMutation({
     mutationFn: () => api.launch({ kind: params.kind, id: params.id }, mission, picked),

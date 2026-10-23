@@ -4,6 +4,7 @@ import type { Database, Tx } from './db.js';
 import {
   armies, bases, nests, notifications, reports, users, type ArmyMission, type ReportData, type ReportKind,
 } from './schema.js';
+import { pendingRequestCount, sharedReportSide, unreadMessageCount } from './social.js';
 import { activeSeason, respawnNest, spawnBase, type Season } from './world.js';
 
 const HOUR = 3600_000;
@@ -223,6 +224,7 @@ export async function baseView(ctx: BaseContext) {
     maxArmiesOut: R.maxArmiesOut(state.levels.commandCenter),
     incoming,
     unreadReports: unread,
+    social: { friendRequests: await pendingRequestCount(tx, row.userId), unreadMessages: await unreadMessageCount(tx, row.userId) },
   };
 }
 
@@ -582,7 +584,7 @@ function perspective(r: typeof reports.$inferSelect, userId: string): 'attacker'
   return r.attackerUserId === userId ? 'attacker' : 'defender';
 }
 
-function headline(r: typeof reports.$inferSelect, side: 'attacker' | 'defender'): string {
+export function headline(r: typeof reports.$inferSelect, side: 'attacker' | 'defender'): string {
   const d = r.data;
   if (r.kind === 'scout') {
     return side === 'attacker'
@@ -615,13 +617,19 @@ export async function listReports(db: Database, userId: string, before?: number)
 
 export async function readReport(db: Database, userId: string, id: string) {
   await processDueArrivals(db, Date.now());
-  const [r] = await db.select().from(reports).where(and(
-    eq(reports.id, id), or(eq(reports.attackerUserId, userId), eq(reports.defenderUserId, userId)),
-  ));
+  const [r] = await db.select().from(reports).where(eq(reports.id, id));
   if (!r) throw new GameError('not_found', 404);
-  const side = perspective(r, userId);
-  await db.update(reports).set(side === 'attacker' ? { attackerSeen: true } : { defenderSeen: true }).where(eq(reports.id, id));
-  return { id: r.id, kind: r.kind, at: r.at.getTime(), outcome: r.outcome, side, title: headline(r, side), data: r.data, text: reportText(r, side) };
+  const involved = r.attackerUserId === userId || r.defenderUserId === userId;
+  // Friends can open a report shared with them in a message; they see it the way the sharer did.
+  const side = involved ? perspective(r, userId) : await sharedReportSide(db, userId, id);
+  if (!side) throw new GameError('not_found', 404);
+  if (involved) {
+    await db.update(reports).set(side === 'attacker' ? { attackerSeen: true } : { defenderSeen: true }).where(eq(reports.id, id));
+  }
+  return {
+    id: r.id, kind: r.kind, at: r.at.getTime(), outcome: r.outcome, side, shared: !involved,
+    title: headline(r, side), data: r.data, text: reportText(r, side),
+  };
 }
 
 function reportText(r: typeof reports.$inferSelect, side: 'attacker' | 'defender'): string {

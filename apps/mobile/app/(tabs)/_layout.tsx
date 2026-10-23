@@ -53,7 +53,16 @@ export default function TabLayout() {
           tabBarBadgeStyle: { backgroundColor: colors.accent, color: colors.bg },
         }}
       />
-      <Tabs.Screen name="social" options={{ title: 'Social', tabBarIcon: icon('☺') }} />
+      <Tabs.Screen
+        name="social"
+        options={{
+          title: 'Social',
+          tabBarIcon: icon('☺'),
+          tabBarBadge: base && base.social.friendRequests + base.social.unreadMessages > 0
+            ? base.social.friendRequests + base.social.unreadMessages : undefined,
+          tabBarBadgeStyle: { backgroundColor: colors.accent, color: colors.bg },
+        }}
+      />
     </Tabs>
   );
 }

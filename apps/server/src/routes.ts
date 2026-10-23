@@ -10,6 +10,7 @@ import type { Database } from './db.js';
 import * as game from './game.js';
 import { GameError } from './game.js';
 import { bases, pushTokens, users } from './schema.js';
+import * as social from './social.js';
 import { activeSeason, spawnBase } from './world.js';
 
 declare module 'fastify' {
@@ -38,6 +39,12 @@ const schemas = {
   }),
   pushToken: z.object({ token: z.string().min(10).max(300), platform: z.enum(['ios', 'android', 'web']) }),
   idParam: z.object({ id: uuid }),
+  userParam: z.object({ userId: uuid }),
+  friendRequest: z.object({ username: z.string().max(40).optional(), code: z.string().max(20).optional() })
+    .refine((b) => b.username || b.code, 'Enter a username or invite code'),
+  abuse: z.object({ userId: uuid, messageId: uuid.optional(), reason: z.string().trim().min(1).max(500) }),
+  message: z.object({ body: z.string().max(2000).optional(), reportId: uuid.optional() }),
+  beforeQuery: z.object({ before: z.coerce.number().int().positive().optional() }),
   reportsQuery: z.object({ before: z.coerce.number().int().positive().optional() }),
 };
 
@@ -50,11 +57,18 @@ export interface RouteDeps {
 export function registerRoutes(app: FastifyInstance, { db, tokens, loginLimiter = new AttemptLimiter(10, 15 * 60_000) }: RouteDeps): void {
   app.decorateRequest('userId', '');
 
+  const seen = new Map<string, number>();
   const authenticate = async (req: FastifyRequest, reply: FastifyReply) => {
     const header = req.headers.authorization;
     const userId = header?.startsWith('Bearer ') ? await tokens.verifyAccess(header.slice(7)) : null;
     if (!userId) return reply.code(401).send({ error: 'unauthorized', message: 'Please log in again.' });
     req.userId = userId;
+    // "Last seen" for friends lists, written at most every five minutes per user.
+    const now = Date.now();
+    if ((seen.get(userId) ?? 0) < now - 5 * 60_000) {
+      seen.set(userId, now);
+      db.update(users).set({ lastSeenAt: new Date(now) }).where(eq(users.id, userId)).catch((err) => req.log.warn(err));
+    }
   };
   const authed = { preHandler: authenticate };
 
@@ -82,6 +96,7 @@ export function registerRoutes(app: FastifyInstance, { db, tokens, loginLimiter 
         near = b;
       }
       await spawnBase(tx, { season, userId: user.id, username: user.username, now: Date.now(), near });
+      if (body.inviteCode) await social.sendFriendRequest(tx, user.id, { code: body.inviteCode });
       return { user, tokens: await tokens.issue(tx, user.id), inviterId: inviter?.userId ?? null };
     });
     reply.code(201);
@@ -172,6 +187,38 @@ export function registerRoutes(app: FastifyInstance, { db, tokens, loginLimiter 
   app.get('/reports', authed, async (req) => game.listReports(db, req.userId, schemas.reportsQuery.parse(req.query).before));
 
   app.get('/reports/:id', authed, async (req) => game.readReport(db, req.userId, schemas.idParam.parse(req.params).id));
+
+  // ── Social ──
+  app.get('/friends', authed, async (req) => social.listFriends(db, req.userId));
+
+  app.post('/friends/requests', authed, async (req) => social.sendFriendRequest(db, req.userId, schemas.friendRequest.parse(req.body)));
+
+  app.post('/friends/requests/:id/accept', authed, async (req) =>
+    social.answerFriendRequest(db, req.userId, schemas.idParam.parse(req.params).id, true));
+
+  app.post('/friends/requests/:id/decline', authed, async (req) =>
+    social.answerFriendRequest(db, req.userId, schemas.idParam.parse(req.params).id, false));
+
+  app.delete('/friends/:userId', authed, async (req) => social.removeFriend(db, req.userId, schemas.userParam.parse(req.params).userId));
+
+  app.get('/blocks', authed, async (req) => social.listBlocks(db, req.userId));
+
+  app.post('/blocks/:userId', authed, async (req) => social.block(db, req.userId, schemas.userParam.parse(req.params).userId));
+
+  app.delete('/blocks/:userId', authed, async (req) => social.unblock(db, req.userId, schemas.userParam.parse(req.params).userId));
+
+  app.post('/abuse-reports', authed, async (req) => social.reportAbuse(db, req.userId, schemas.abuse.parse(req.body)));
+
+  app.get('/conversations', authed, async (req) => social.listConversations(db, req.userId));
+
+  app.get('/messages/:userId', authed, async (req) =>
+    social.getMessages(db, req.userId, schemas.userParam.parse(req.params).userId, schemas.beforeQuery.parse(req.query).before));
+
+  app.post('/messages/:userId', authed, async (req, reply) => {
+    const out = await social.sendMessage(db, req.userId, schemas.userParam.parse(req.params).userId, schemas.message.parse(req.body));
+    reply.code(201);
+    return out;
+  });
 }
 
 function publicUser(user: typeof users.$inferSelect) {

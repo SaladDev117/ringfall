@@ -1,6 +1,6 @@
 import type { Army, BattleResult, BuildJob, BuildingLevels, Resources, TrainJob } from '@ringfall/rules';
 import { sql } from 'drizzle-orm';
-import { boolean, index, integer, jsonb, pgTable, serial, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import { boolean, index, integer, jsonb, pgTable, primaryKey, serial, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 
 const ts = (name: string) => timestamp(name, { withTimezone: true, mode: 'date' });
 
@@ -10,6 +10,8 @@ export const users = pgTable('users', {
   passwordHash: text('password_hash').notNull(),
   inviteCode: text('invite_code').notNull(),
   recoveryEmail: text('recovery_email'),
+  /** Updated at most every few minutes, for "last seen" on friends lists. */
+  lastSeenAt: ts('last_seen_at'),
   createdAt: ts('created_at').notNull().defaultNow(),
 }, (t) => [
   uniqueIndex('users_username_lower_idx').on(sql`lower(${t.username})`),
@@ -166,3 +168,59 @@ export const pushTokens = pgTable('push_tokens', {
   platform: text('platform').notNull(),
   createdAt: ts('created_at').notNull().defaultNow(),
 }, (t) => [index('push_tokens_user_idx').on(t.userId)]);
+
+// ── Social ────────────────────────────────────────────────────────────────────
+
+const userRef = (name: string) => uuid(name).notNull().references(() => users.id, { onDelete: 'cascade' });
+
+/** Stored once per pair, with `userA < userB`. */
+export const friendships = pgTable('friendships', {
+  userA: userRef('user_a'),
+  userB: userRef('user_b'),
+  createdAt: ts('created_at').notNull().defaultNow(),
+}, (t) => [primaryKey({ columns: [t.userA, t.userB] }), index('friendships_b_idx').on(t.userB)]);
+
+export const friendRequests = pgTable('friend_requests', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  fromUser: userRef('from_user'),
+  toUser: userRef('to_user'),
+  createdAt: ts('created_at').notNull().defaultNow(),
+}, (t) => [uniqueIndex('friend_requests_pair_idx').on(t.fromUser, t.toUser), index('friend_requests_to_idx').on(t.toUser)]);
+
+export const blocks = pgTable('blocks', {
+  blocker: userRef('blocker'),
+  blocked: userRef('blocked'),
+  createdAt: ts('created_at').notNull().defaultNow(),
+}, (t) => [primaryKey({ columns: [t.blocker, t.blocked] })]);
+
+/** One conversation per pair of friends, `userA < userB`. */
+export const conversations = pgTable('conversations', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userA: userRef('user_a'),
+  userB: userRef('user_b'),
+  lastMessageAt: ts('last_message_at').notNull().defaultNow(),
+  readA: ts('read_a').notNull().defaultNow(),
+  readB: ts('read_b').notNull().defaultNow(),
+}, (t) => [uniqueIndex('conversations_pair_idx').on(t.userA, t.userB), index('conversations_b_idx').on(t.userB)]);
+
+export const messages = pgTable('messages', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  conversationId: uuid('conversation_id').notNull().references(() => conversations.id, { onDelete: 'cascade' }),
+  senderId: userRef('sender_id'),
+  body: text('body').notNull(),
+  /** A shared battle or scout report. */
+  reportId: uuid('report_id').references(() => reports.id, { onDelete: 'set null' }),
+  /** The word filter changed something. */
+  flagged: boolean('flagged').notNull().default(false),
+  createdAt: ts('created_at').notNull().defaultNow(),
+}, (t) => [index('messages_conversation_idx').on(t.conversationId, t.createdAt)]);
+
+export const abuseReports = pgTable('abuse_reports', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  reporterId: userRef('reporter_id'),
+  targetUserId: userRef('target_user_id'),
+  messageId: uuid('message_id').references(() => messages.id, { onDelete: 'set null' }),
+  reason: text('reason').notNull(),
+  status: text('status').$type<'open' | 'actioned' | 'dismissed'>().notNull().default('open'),
+  createdAt: ts('created_at').notNull().defaultNow(),
+}, (t) => [index('abuse_reports_status_idx').on(t.status, t.createdAt)]);
