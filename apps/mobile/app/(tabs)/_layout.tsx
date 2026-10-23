@@ -1,5 +1,5 @@
-import { Link, Tabs } from 'expo-router';
-import { Pressable, Text, type ColorValue } from 'react-native';
+import { Tabs } from 'expo-router';
+import { Text, type ColorValue } from 'react-native';
 
 import { useBase } from '@/lib/game';
 import { colors } from '@/lib/theme';
@@ -19,21 +19,7 @@ export default function TabLayout() {
         headerTitleStyle: { fontWeight: '700' },
       }}
     >
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: base?.name ?? 'Base',
-          tabBarLabel: 'Base',
-          tabBarIcon: icon('⌂'),
-          headerRight: () => (
-            <Link href="/settings" asChild>
-              <Pressable accessibilityLabel="Settings" style={{ paddingHorizontal: 16 }}>
-                <Text style={{ color: colors.muted, fontSize: 20 }}>⚙</Text>
-              </Pressable>
-            </Link>
-          ),
-        }}
-      />
+      <Tabs.Screen name="index" options={{ title: 'Base', headerShown: false, tabBarIcon: icon('⌂') }} />
       <Tabs.Screen
         name="army"
         options={{

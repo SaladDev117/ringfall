@@ -1,4 +1,4 @@
-import type { Army, BuildJob, BuildingLevels, Resources, TrainJob } from '@ringfall/rules';
+import type { Army, BattleResult, BuildJob, BuildingLevels, Resources, TrainJob } from '@ringfall/rules';
 
 export interface User {
   id: string;
@@ -105,7 +105,7 @@ export interface ReportDetail extends Omit<ReportSummary, 'seen'> {
   text: string;
   /** A friend shared it with you. */
   shared: boolean;
-  data: { loot?: Resources; attackerName: string; defenderName: string; targetName: string; coords: string };
+  data: { loot?: Resources; attackerName: string; defenderName: string; targetName: string; coords: string; battle?: BattleResult };
 }
 
 export interface FriendView {

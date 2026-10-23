@@ -1,7 +1,8 @@
 # Ringfall
 
-A text-first, timer-based strategy game for iOS and Android. Build an outpost on an ancient alien ringworld,
+A timer-based strategy game for iOS and Android. Build an outpost on an ancient alien ringworld,
 train troops (a buggy takes 20 minutes, a Titan 12 hours), and raid your friends while they raid you back.
+Your base, your army, the sector map and every battle are drawn in low-poly 3D (three.js via react-three-fiber).
 
 The full design is in **[docs/spec.md](docs/spec.md)**.
 
@@ -9,6 +10,7 @@ The full design is in **[docs/spec.md](docs/spec.md)**.
 ```
 packages/rules/   game numbers, formulas and the battle simulator (shared by app and server)
 apps/mobile/      Expo app (iOS, Android, web): base, building, training, map, armies, reports, friends, messages
+apps/mobile/components/three/   3D scenes (Expo DOM components): base, unit showcase, battle replay, sector map
 apps/server/      Node API (Fastify + Drizzle + Postgres): accounts, bases, training, map, armies, battles, reports, social
 neon.ts           Neon project policy (project `ringfall`, branch `production`)
 ```

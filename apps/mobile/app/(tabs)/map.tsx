@@ -4,6 +4,7 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { View } from 'react-native';
 
+import SectorMap from '@/components/three/SectorMap';
 import { api, errorText } from '@/lib/api';
 import { colors } from '@/lib/theme';
 import type { PlaceView } from '@/lib/types';
@@ -33,7 +34,20 @@ export default function MapScreen() {
         <T muted mono size={13}>Sector {data.me.sector} · you are at {data.me.x}, {data.me.y}</T>
         {data.sectors.length > 1 && <T faint size={12}>Your Sensor Array also shows {data.sectors.filter((s) => s.sector !== data.me.sector).map((s) => s.name).join(', ')}</T>}
       </Card>
-      <Grid places={data.places} me={data.me} />
+      <View style={{ height: 380, borderRadius: 14, overflow: 'hidden', borderWidth: 1, borderColor: colors.border }}>
+        <SectorMap
+          dom={{ style: { flex: 1 } }}
+          sector={data.me.sector}
+          places={data.places.filter((p) => R.sectorOf(p.x) === data.me.sector).map((p) => ({
+            id: p.id, kind: p.kind, name: p.name, x: p.x, y: p.y,
+            level: p.kind === 'nest' ? p.level : undefined, isMe: p.kind === 'base' && p.isMe,
+          }))}
+          onSelect={(id) => {
+            const place = data.places.find((p) => p.id === id);
+            if (place) openPlace(place);
+          }}
+        />
+      </View>
       <Row style={{ gap: 6 }}>
         {(['all', 'players', 'nests'] as Filter[]).map((f) => (
           <Button key={f} small title={f[0]!.toUpperCase() + f.slice(1)} variant={filter === f ? 'primary' : 'secondary'} onPress={() => setFilter(f)} />
@@ -46,14 +60,18 @@ export default function MapScreen() {
   );
 }
 
-function PlaceRow({ place }: { place: PlaceView }) {
-  const open = () => router.push({
+function openPlace(place: PlaceView) {
+  router.push({
     pathname: '/send',
     params: {
       kind: place.kind, id: place.id, name: place.name, x: String(place.x), y: String(place.y),
       level: place.kind === 'nest' ? String(place.level) : undefined,
     },
   });
+}
+
+function PlaceRow({ place }: { place: PlaceView }) {
+  const open = () => openPlace(place);
   const blocked = place.kind === 'base' && place.blocked ? BLOCK_TEXT[place.blocked] ?? place.blocked : '';
   return (
     <Card>
@@ -73,32 +91,6 @@ function PlaceRow({ place }: { place: PlaceView }) {
           {blocked ? <T faint size={11}>{blocked}</T> : null}
         </View>
       </Row>
-    </Card>
-  );
-}
-
-/** The whole sector at a glance, MXit style: each character covers a 3 × 3 patch of tiles. */
-function Grid({ places, me }: { places: PlaceView[]; me: { x: number; y: number; sector: number } }) {
-  const CELL = 3;
-  const x0 = me.sector * R.SECTOR_LENGTH;
-  const cols = Math.ceil(R.SECTOR_LENGTH / CELL);
-  const rows = Math.ceil(R.RING_WIDTH / CELL);
-  const cells: string[][] = Array.from({ length: rows }, () => Array<string>(cols).fill('·'));
-  const rank: Record<string, number> = { '·': 0, '✶': 1, '○': 2, '■': 3 };
-  const put = (x: number, y: number, ch: string) => {
-    const cx = Math.floor((x - x0) / CELL);
-    const cy = Math.floor(y / CELL);
-    const row = cells[cy];
-    if (!row || cx < 0 || cx >= cols) return;
-    if (rank[ch]! > rank[row[cx]!]!) row[cx] = ch;
-  };
-  for (const p of places) put(p.x, p.y, p.kind === 'nest' ? '✶' : p.isMe ? '■' : '○');
-  return (
-    <Card style={{ alignItems: 'center' }}>
-      {cells.map((row, i) => (
-        <T key={i} mono size={11} color={colors.muted} style={{ lineHeight: 15 }}>{row.join(' ')}</T>
-      ))}
-      <T faint size={11} style={{ marginTop: 6 }}>■ you  ○ commander  ✶ Blight Nest · each dot is 3×3 tiles</T>
     </Card>
   );
 }

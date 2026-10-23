@@ -9,6 +9,9 @@ export function syncServerTime(serverTime: number): void {
 
 export const serverNow = (): number => Date.now() + offset;
 
+/** Server time minus this device's time, for code that keeps its own clock (the 3D views). */
+export const clockOffset = (): number => offset;
+
 const ClockContext = createContext(0);
 
 /** One shared one-second tick for every countdown on screen. */

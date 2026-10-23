@@ -206,7 +206,7 @@ export async function baseView(ctx: BaseContext) {
     units: state.units,
     unitsAway: away,
     supply: { used: R.supplyUsed(state, away), cap: R.supplyCap(state.levels.habitat) },
-    power: row.power,
+    power: R.power(state.levels, addArmies(state.units, away)),
     shieldUntil: row.shieldUntil && row.shieldUntil.getTime() > now ? row.shieldUntil.getTime() : null,
     protectionUntil: protectionUntil(row, state, now),
     armies: mine.map((a) => ({

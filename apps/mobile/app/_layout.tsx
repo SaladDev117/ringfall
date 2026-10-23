@@ -69,6 +69,7 @@ function RootNav() {
         <Stack.Screen name="send" options={{ title: 'Send army' }} />
         <Stack.Screen name="report/[id]" options={{ title: 'Report' }} />
         <Stack.Screen name="settings" options={{ title: 'Settings' }} />
+        <Stack.Screen name="buildings" options={{ title: 'Buildings' }} />
         <Stack.Screen name="friend/[userId]" options={{ title: 'Commander' }} />
         <Stack.Screen name="chat/[userId]" options={{ title: 'Messages' }} />
       </Stack.Protected>

@@ -2,8 +2,9 @@ import * as R from '@ringfall/rules';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { View } from 'react-native';
+import { Pressable, View } from 'react-native';
 
+import UnitShowcase from '@/components/three/UnitShowcase';
 import { api, errorText } from '@/lib/api';
 import { useNow } from '@/lib/clock';
 import { clock, duration, fmt } from '@/lib/format';
@@ -15,29 +16,44 @@ import { Button, Card, Countdown, ErrorText, Loading, ProgressBar, Row, Screen, 
 export default function TrainScreen() {
   const { building } = useLocalSearchParams<{ building: R.TrainingBuilding }>();
   const { data: base } = useBase();
-  if (!base) return <Loading />;
   const units = R.UNIT_KEYS.filter((k) => R.UNITS[k].trainedAt === building);
+  const [selected, setSelected] = useState<R.UnitKey>(units[0] ?? 'trooper');
+  if (!base) return <Loading />;
   const queue = base.training.filter((t) => t.building === building);
   const buildingName = R.BUILDINGS[building]?.name ?? 'Train';
 
   return (
-    <Screen>
+    <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <Stack.Screen options={{ title: buildingName }} />
-      <Row style={{ justifyContent: 'space-between' }}>
-        <T muted size={13}>Supply</T>
-        <T mono size={13} color={base.supply.used >= base.supply.cap ? colors.warn : colors.muted}>
-          {fmt(base.supply.used)} / {fmt(base.supply.cap)}
-        </T>
-      </Row>
-      {queue.length > 0 && (
-        <>
-          <SectionTitle>Queue</SectionTitle>
-          {queue.map((job) => <QueueItem key={job.id} job={job} />)}
-        </>
-      )}
-      <SectionTitle>Units</SectionTitle>
-      {units.map((u) => <UnitCard key={u} base={base} unit={u} />)}
-    </Screen>
+      {/* Pinned above the list, so the model stays in view whichever unit card is tapped. */}
+      <View style={{ height: 230, margin: 16, marginBottom: 0, borderRadius: 14, overflow: 'hidden', borderWidth: 1, borderColor: colors.border }}>
+        <UnitShowcase dom={{ style: { flex: 1 } }} unit={selected} />
+        <View pointerEvents="none" style={{ position: 'absolute', left: 12, bottom: 10 }}>
+          <T bold size={18}>{UNIT_ICONS[selected]} {R.UNITS[selected].name}</T>
+          <T muted size={12}>{R.UNITS[selected].class} · drag to spin</T>
+        </View>
+      </View>
+      <Screen>
+        <Row style={{ justifyContent: 'space-between' }}>
+          <T muted size={13}>Supply</T>
+          <T mono size={13} color={base.supply.used >= base.supply.cap ? colors.warn : colors.muted}>
+            {fmt(base.supply.used)} / {fmt(base.supply.cap)}
+          </T>
+        </Row>
+        {queue.length > 0 && (
+          <>
+            <SectionTitle>Queue</SectionTitle>
+            {queue.map((job) => <QueueItem key={job.id} job={job} />)}
+          </>
+        )}
+        <SectionTitle>Units</SectionTitle>
+        {units.map((u) => (
+          <Pressable key={u} onPress={() => setSelected(u)}>
+            <UnitCard base={base} unit={u} selected={u === selected} />
+          </Pressable>
+        ))}
+      </Screen>
+    </View>
   );
 }
 
@@ -67,7 +83,7 @@ function QueueItem({ job }: { job: R.TrainJob }) {
   );
 }
 
-function UnitCard({ base, unit }: { base: BaseView; unit: R.UnitKey }) {
+function UnitCard({ base, unit, selected }: { base: BaseView; unit: R.UnitKey; selected: boolean }) {
   const now = useNow();
   const qc = useQueryClient();
   const [qty, setQty] = useState(1);
@@ -92,7 +108,7 @@ function UnitCard({ base, unit }: { base: BaseView; unit: R.UnitKey }) {
   const atHome = base.units[unit] ?? 0;
 
   return (
-    <Card>
+    <Card tone={selected ? 'accent' : undefined}>
       <Row style={{ justifyContent: 'space-between' }}>
         <T size={17} bold>{UNIT_ICONS[unit]} {def.name}</T>
         <Tag>{def.class}</Tag>
