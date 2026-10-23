@@ -2,10 +2,20 @@
   "name": "ringfall",
   "private": true,
   "packageManager": "pnpm@10.28.0",
-  "engines": { "node": ">=22" },
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
+    "build": "pnpm -r build",
+    "start": "pnpm --filter @ringfall/server start",
+    "dev": "pnpm --filter @ringfall/server dev",
     "test": "pnpm -r test",
     "typecheck": "pnpm -r typecheck",
-    "sim": "pnpm --filter @ringfall/rules sim"
+    "sim": "pnpm --filter @ringfall/rules sim",
+    "db:sql": "pnpm --filter @ringfall/server sql"
+  },
+  "devDependencies": {
+    "@neon/config": "^1.9.3",
+    "@neon/env": "^1.6.4"
   }
 }

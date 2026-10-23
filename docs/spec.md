@@ -446,7 +446,7 @@ ringfall/
 |---|---|---|
 | App | Expo + React Native + TypeScript | One codebase for iOS and Android. EAS Build for TestFlight / Play internal testing. EAS Update for over-the-air fixes |
 | Server | Node.js + Fastify | Same language as the app, so the rules package is shared |
-| Database | PostgreSQL (managed: Neon, Supabase or Railway) | Transactions and row locks keep resources and battles consistent |
+| Database | PostgreSQL on Neon (project `ringfall`, region eu-central-1) | Transactions and row locks keep resources and battles consistent |
 | ORM | Drizzle | Typed SQL with simple migrations |
 | Timers / jobs | pg-boss (job queue inside Postgres) | No Redis needed at this scale. Jobs survive restarts |
 | Live updates | WebSocket per logged-in user | Timers finishing, incoming attacks and new messages show instantly in-app |
