@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { buildApp } from '../src/app.js';
 import type { Db } from '../src/db.js';
 
-const fakeDb = (query: Db['query']): Db => ({ transport: 'tcp', query, close: async () => {} });
+const fakeDb = (query: Db['query']): Db => ({ transport: 'tcp', query, orm: null, close: async () => {} });
 
 describe('GET /health', () => {
   it('reports the database it reached', async () => {

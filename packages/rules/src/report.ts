@@ -48,6 +48,46 @@ const HEADLINE = {
   defender: { attacker: 'RAIDED', defender: 'DEFENDED', draw: 'HELD. The attackers pulled back' },
 } as const;
 
+const W_SCOUT = 20;
+
+export interface ScoutReportContext {
+  perspective: 'attacker' | 'defender';
+  attackerName: string;
+  defenderName: string;
+  targetName: string;
+  coords?: string;
+  success: boolean;
+  intel: { resources: Resources; units: Army; levels: Partial<Record<keyof typeof BUILDINGS, number>> } | null;
+}
+
+/** Plain-text scout report. */
+export function formatScoutReport(ctx: ScoutReportContext): string {
+  const lines = [`🛰 SCOUT REPORT · ${ctx.targetName.toUpperCase()} (${ctx.defenderName})${ctx.coords ? ` · ${ctx.coords}` : ''}`, ''];
+  if (ctx.perspective === 'defender') {
+    lines.push(ctx.success
+      ? `${ctx.attackerName}'s Wisp Drones slipped past your sensors and scouted your base.`
+      : `Your Sensor Array spotted ${ctx.attackerName}'s Wisp Drones and shot them all down.`);
+    return lines.join('\n');
+  }
+  if (!ctx.success || !ctx.intel) {
+    lines.push('Your Wisp Drones were shot down before they saw anything.', 'Send more Wisps than twice their Sensor Array level, plus their own Wisps.');
+    return lines.join('\n');
+  }
+  const { resources, units, levels } = ctx.intel;
+  lines.push(`RESOURCES  ${RESOURCES.map((k) => `${fmt(resources[k])} ${LOOT_NAMES[k][1]}`).join(' · ')}`, '');
+  lines.push('UNITS AT HOME');
+  const home = COMBATANT_KEYS.filter((k) => units[k]);
+  for (const k of home) lines.push(`  ${pad(COMBATANTS[k].name, W_SCOUT)}${padL(fmt(units[k]!), 6)}`);
+  if (!home.length) lines.push('  none');
+  lines.push('', 'BUILDINGS');
+  for (const [type, def] of Object.entries(BUILDINGS)) {
+    const level = levels[type as keyof typeof BUILDINGS];
+    if (level) lines.push(`  ${pad(def.name, W_SCOUT)}${padL(`L${level}`, 6)}`);
+  }
+  return lines.join('\n');
+}
+
+
 /** Plain-text battle report, as shown in the Reports inbox. */
 export function formatBattleReport(result: BattleResult, ctx: ReportContext): string {
   const mine = ctx.perspective;

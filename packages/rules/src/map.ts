@@ -34,5 +34,14 @@ export function travelSeconds(a: Point, b: Point, army: Army): number {
   return Math.ceil((travelDistance(a, b) / slowestSpeed(army)) * 3600);
 }
 
+const SECTOR_FIRST = ['Glasswater', 'Ashfall', 'Hollow', 'Lantern', 'Ember', 'Silent', 'Iron', 'Verdant', 'Shattered', 'Gloam'];
+const SECTOR_SECOND = ['Reach', 'Span', 'Meridian', 'Coast'];
+
+/** Every sector has a name, e.g. sector 0 is "Glasswater Reach". */
+export const sectorName = (sector: number): string => {
+  const i = ((sector % SECTOR_COUNT) + SECTOR_COUNT) % SECTOR_COUNT;
+  return `${SECTOR_FIRST[i % SECTOR_FIRST.length]} ${SECTOR_SECOND[Math.floor(i / SECTOR_FIRST.length) % SECTOR_SECOND.length]}`;
+};
+
 /** Display form, e.g. `S14 · 852, 18`. */
 export const formatCoords = (p: Point): string => `S${sectorOf(p.x)} · ${wrapX(p.x)}, ${p.y}`;
