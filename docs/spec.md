@@ -104,7 +104,7 @@ player back with push notifications when something is ready or an attack is comi
 | 5 | 242 | 161 | 8.1 |
 | 10 | 778 | 519 | 26 |
 | 15 | 1,880 | 1,253 | 63 |
-| 20 | 4,037 | 2,691 | 135 |
+| 20 | 4,036 | 2,691 | 135 |
 
 **Storage.** The Depot caps each resource at `5,000 · 1.3^(L−1)` (L10 ≈ 53k, L20 ≈ 730k). The Relic cap is 1/20 of that.
 Production stops at the cap. That's the reason to log in.
@@ -212,7 +212,7 @@ Speed is in **tiles per hour**.
 **Shape.** The Ring is a strip **2,400 tiles long × 40 tiles wide** that **wraps around** (x = 2,399 sits next to x = 0).
 It's split into **40 sectors** of 60 × 40 tiles, each with a name and an Oruun Gate at its centre.
 
-**Coordinates** are shown as `S14 · 312, 18` (sector, x, y).
+**Coordinates** are shown as `S14 · 852, 18` (sector, x, y).
 
 **Spawning.** New players are placed in the newest open sector, next to other recent arrivals, until it holds ~60 bases.
 Then the next sector opens. **Signing up with a friend's invite code puts you in the friend's sector** (as close
@@ -344,7 +344,7 @@ result:
 formatting, and can be **shared into a DM** for bragging rights. Example (illustrative numbers):
 
 ```
-⚔ RAID ON IRON HOLLOW (dave) · S14 · 312, 18
+⚔ RAID ON IRON HOLLOW (dave) · S14 · 852, 18
 VICTORY · 3 rounds · Thu 21:42
 
 YOUR FORCE            SENT   LOST
@@ -566,7 +566,7 @@ feel like a 2026 app.
 
 ```
 ┌──────────────────────────────────┐
-│ IRON HOLLOW        S14 · 312, 18 │
+│ IRON HOLLOW        S14 · 852, 18 │
 │ ⛭ 14,210 / 40,786      +778/h    │
 │ ⚡  8,904 / 40,786      +519/h    │
 │ ◆    120 /  2,039        +8/h    │
