@@ -12,7 +12,8 @@
     "test": "pnpm -r test",
     "typecheck": "pnpm -r typecheck",
     "sim": "pnpm --filter @ringfall/rules sim",
-    "db:sql": "pnpm --filter @ringfall/server sql"
+    "db:sql": "pnpm --filter @ringfall/server sql",
+    "build:function": "pnpm --filter @ringfall/server build:function"
   },
   "devDependencies": {
     "@neon/config": "^1.9.3",

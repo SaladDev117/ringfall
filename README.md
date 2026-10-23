@@ -38,6 +38,16 @@ pnpm sim "40 trooper, 10 rattler, 3 mule" vs "12 trooper, 2 breacher, sentry:2, 
 
 Push notifications need a development build and an EAS project (`npx eas-cli init`); everything else works in Expo Go.
 
+## Play online (Neon Function)
+The whole game runs as one Neon Function: the web app at `/`, the API under `/api`, next to the Neon database.
+```bash
+pnpm build:function            # web export with API_URL=/api, embedded into the function bundle
+neon deploy --env .env.local   # .env.local needs JWT_SECRET alongside the Neon variables
+neon functions get ringfall    # prints the public URL
+```
+Run `pnpm --filter @ringfall/server db:migrate` (or start the server once) after schema changes; the function
+doesn't migrate on its own.
+
 ## How the server works
 - Every base's changing state (resources, levels, units, build and training queues) lives in its `bases` row.
   `packages/rules` `settleBase()` moves it forward in time; nothing runs on a tick.

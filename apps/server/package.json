@@ -11,10 +11,12 @@
     "db:generate": "drizzle-kit generate",
     "sql": "tsx --env-file-if-exists=../../.env.local scripts/sql.ts",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "build:function": "cd ../mobile && EXPO_PUBLIC_API_URL=/api CI=1 npx expo export --platform web --clear && cd ../server && node function/embed-web.mjs ../mobile/dist function/web-assets.ts && tsc -p tsconfig.function.json --noEmit"
   },
   "dependencies": {
     "@fastify/cors": "^11.3.1",
+    "@neon/functions": "^0.11.0",
     "@neondatabase/serverless": "1.2.0",
     "@node-rs/argon2": "2.2.2",
     "@ringfall/rules": "workspace:*",

@@ -14,6 +14,8 @@ export interface Db {
   query<T extends Row = Row>(text: string, params?: unknown[]): Promise<T[]>;
   /** Drizzle over node-postgres. Only on TCP: the game needs interactive transactions. */
   orm: Database | null;
+  /** The underlying node-postgres pool (TCP only). */
+  pool: pg.Pool | null;
   close(): Promise<void>;
 }
 
@@ -35,15 +37,18 @@ export function createDb(env: NodeJS.ProcessEnv = process.env): Db {
       transport: 'https',
       query: async <T extends Row>(text: string, params: unknown[] = []) => (await sql.query(text, params)) as T[],
       orm: null,
+      pool: null,
       close: async () => {},
     };
   }
 
-  const pool = new pg.Pool({ connectionString: url, max: Number(env.DATABASE_POOL_MAX ?? 10) });
+  // node-postgres already treats sslmode=require as verify-full; saying so explicitly silences its deprecation warning.
+  const pool = new pg.Pool({ connectionString: url.replace('sslmode=require', 'sslmode=verify-full'), max: Number(env.DATABASE_POOL_MAX ?? 10) });
   return {
     transport: 'tcp',
     query: async <T extends Row>(text: string, params: unknown[] = []) => (await pool.query<T>(text, params)).rows,
     orm: drizzle(pool, { schema }),
+    pool,
     close: () => pool.end(),
   };
 }
