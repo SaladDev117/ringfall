@@ -590,7 +590,7 @@ feel like a 2026 app.
 | Screen | Contents |
 |---|---|
 | **Sign up / Log in** | Username, password, optional invite code. Links to privacy policy and terms |
-| **Tutorial** (5 steps) | Upgrade the Alloy Extractor, train 5 Troopers, raid a Blight Nest L1, read the report, add a friend / share your code |
+| **Tutorial** (6 steps) | Upgrade the Command Center, train 5 Troopers, raid a Blight Nest L1, watch the battle report, upgrade the Alloy Extractor, share your code / add a friend. The Command Center comes first because nothing can be built above its level; its 3-minute upgrade runs while the player trains and raids. Each step pays a small reward (about the starting resources again in total). Two free one-time speed-ups (finish the first Trooper batch, march the first raid straight to the nest) put the first battle minutes away. A card on the Base screen shows the step, a bouncing arrow points at the building in 3D, and the target screens show hints. Skippable |
 | **Base** | Resource bar (amount / cap, rate), shield/protection timer, active timers (incoming attacks pinned on top in red), building list |
 | **Building detail** | What it does now vs at the next level, cost, time, the requirement it's missing (if any), Upgrade/Cancel |
 | **Train** (per training building) | Unit cards (icon, stats, cost, time), a quantity stepper with a "max affordable" button, the queue with countdowns |

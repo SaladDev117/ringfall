@@ -15,6 +15,13 @@
       "when": 1792772165440,
       "tag": "0001_social",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792835886472,
+      "tag": "0002_tutorial",
+      "breakpoints": true
     }
   ]
 }

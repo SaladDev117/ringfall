@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Stack, useLocalSearchParams } from 'expo-router';
+import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ScrollView, View } from 'react-native';
 
@@ -7,8 +7,9 @@ import BattleReplay from '@/components/three/BattleReplay';
 import { api, errorText } from '@/lib/api';
 import type { ReportDetail } from '@/lib/types';
 import { clock, fmt } from '@/lib/format';
-import { RESOURCE_ICONS } from '@/lib/game';
+import { RESOURCE_ICONS, useBase } from '@/lib/game';
 import { colors } from '@/lib/theme';
+import { TutorialHint, tutorialStep } from '@/lib/tutorial';
 import { Button, Card, ErrorText, Loading, Row, Screen, SectionTitle, T } from '@/lib/ui';
 
 export default function ReportScreen() {
@@ -16,6 +17,7 @@ export default function ReportScreen() {
   const qc = useQueryClient();
   const { data, error } = useQuery({ queryKey: ['report', id], queryFn: () => api.report(id) });
   const [showLog, setShowLog] = useState(false);
+  const { data: base } = useBase();
 
   // Opening a report marks it read.
   useEffect(() => {
@@ -47,6 +49,14 @@ export default function ReportScreen() {
         </View>
       )}
       {battle && <Button small variant="ghost" title={showLog ? 'Hide battle log' : 'Show battle log'} onPress={() => setShowLog((v) => !v)} />}
+      {data.kind === 'nest' && tutorialStep(base)?.key === 'readReport' && (
+        <>
+          <TutorialHint>
+            That’s how every battle plays out: round by round, using the real troops on both sides. Survivors march home with the loot.
+          </TutorialHint>
+          <Button title="Back to base for your reward" onPress={() => router.navigate('/')} />
+        </>
+      )}
       {(!battle || showLog) && (
         <Card>
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>

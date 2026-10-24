@@ -214,6 +214,7 @@ export async function baseView(ctx: BaseContext) {
       mission: a.mission,
       status: a.status,
       target: targetNames.get(a.id) ?? 'Unknown',
+      targetKind: a.targetNestId ? 'nest' as const : 'base' as const,
       targetCoords: R.formatCoords({ x: a.targetX, y: a.targetY }),
       units: a.status === 'outbound' ? a.units : a.survivors ?? {},
       loot: a.loot,

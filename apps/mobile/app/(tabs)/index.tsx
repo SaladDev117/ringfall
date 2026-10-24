@@ -4,11 +4,13 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import BaseScene from '@/components/three/BaseScene';
+import { TutorialCard } from '@/components/TutorialCard';
 import { errorText } from '@/lib/api';
 import { clockOffset, useNow } from '@/lib/clock';
 import { fmt } from '@/lib/format';
 import { RESOURCE_ICONS, UNIT_ICONS, liveResources, useBase } from '@/lib/game';
 import { colors, mono } from '@/lib/theme';
+import { tutorialTarget } from '@/lib/tutorial';
 import type { BaseView } from '@/lib/types';
 import { Countdown, ErrorText, Loading, Screen } from '@/lib/ui';
 
@@ -32,9 +34,13 @@ export default function BaseScreen() {
         seed={base.id}
         onSelectBuilding={(type) => router.push({ pathname: '/building/[type]', params: { type } })}
         onSelectArmy={() => router.navigate('/army')}
+        highlight={tutorialTarget(base)}
       />
       <Hud base={base} />
-      <Activity base={base} />
+      <View pointerEvents="box-none" style={styles.bottom}>
+        <TutorialCard base={base} />
+        <Activity base={base} />
+      </View>
     </View>
   );
 }
@@ -103,7 +109,7 @@ function Activity({ base }: { base: BaseView }) {
   }
   if (!chips.length) return null;
   return (
-    <View pointerEvents="box-none" style={styles.activity}>
+    <View pointerEvents="box-none">
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingHorizontal: 12 }}>
         {chips.map((c) => (
           <Pressable key={c.key} onPress={c.go} style={[styles.chip, c.tone === 'danger' && styles.chipDanger]}>
@@ -136,7 +142,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1, borderColor: colors.accent,
   },
   shieldText: { color: colors.accent, fontSize: 12, fontFamily: mono },
-  activity: { position: 'absolute', left: 0, right: 0, bottom: 10 },
+  bottom: { position: 'absolute', left: 0, right: 0, bottom: 10, gap: 8 },
   chip: {
     flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: glass, borderRadius: 18, paddingHorizontal: 12,
     paddingVertical: 8, borderWidth: 1, borderColor: colors.border, maxWidth: 240,

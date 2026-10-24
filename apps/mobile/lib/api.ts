@@ -1,4 +1,4 @@
-import type { Army, BuildJob, BuildingType, TrainJob, UnitKey } from '@ringfall/rules';
+import type { Army, BuildJob, BuildingType, Resources, TrainJob, UnitKey } from '@ringfall/rules';
 import { storage } from './storage';
 import type {
   BaseView, ConversationView, FriendsView, NearbyView, ReportDetail, ReportSummary, Session, ThreadView, User,
@@ -121,6 +121,9 @@ export const ERRORS: Record<string, string> = {
   not_friends: 'You can only message friends.',
   cannot_add: 'You can’t add that commander.',
   slow_down: 'Slow down a little.',
+  tutorial_step_not_done: 'Finish this step first.',
+  tutorial_finished: 'The tutorial is already finished.',
+  nothing_to_rush: 'Nothing to speed up right now.',
 };
 
 export const errorText = (e: unknown): string =>
@@ -164,6 +167,9 @@ export const api = {
   launch: (target: { kind: 'base' | 'nest'; id: string }, mission: 'raid' | 'scout', units: Army) =>
     request<{ id: string; arrivesAt: number }>('POST', '/armies', { target, mission, units }),
   recall: (id: string) => request<{ returnsAt: number }>('POST', `/armies/${id}/recall`),
+  tutorialClaim: (shared = false) => request<{ step: number; reward: Resources }>('POST', '/tutorial/claim', { shared }),
+  tutorialRush: () => request<{ kind: 'training' | 'march' }>('POST', '/tutorial/rush'),
+  tutorialSkip: () => request<{ step: number }>('POST', '/tutorial/skip'),
   reports: () => request<ReportSummary[]>('GET', '/reports'),
   report: (id: string) => request<ReportDetail>('GET', `/reports/${id}`),
   registerPushToken: (token: string, platform: 'ios' | 'android' | 'web') => request('POST', '/push-tokens', { token, platform }),

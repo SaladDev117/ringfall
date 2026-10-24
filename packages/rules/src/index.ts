@@ -11,3 +11,4 @@ export * from './report';
 export * from './rng';
 export * from './settle';
 export * from './arrivals';
+export * from './tutorial';

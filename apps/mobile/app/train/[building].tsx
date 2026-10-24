@@ -10,6 +10,7 @@ import { useNow } from '@/lib/clock';
 import { clock, duration, fmt } from '@/lib/format';
 import { RESOURCE_ICONS, UNIT_ICONS, liveResources, useBase } from '@/lib/game';
 import { colors } from '@/lib/theme';
+import { TutorialHint, onStep } from '@/lib/tutorial';
 import type { BaseView } from '@/lib/types';
 import { Button, Card, Countdown, ErrorText, Loading, ProgressBar, Row, Screen, SectionTitle, Stepper, T, Tag, confirm } from '@/lib/ui';
 
@@ -17,8 +18,11 @@ export default function TrainScreen() {
   const { building } = useLocalSearchParams<{ building: R.TrainingBuilding }>();
   const { data: base } = useBase();
   const units = R.UNIT_KEYS.filter((k) => R.UNITS[k].trainedAt === building);
-  const [selected, setSelected] = useState<R.UnitKey>(units[0] ?? 'trooper');
+  const [picked, setSelected] = useState<R.UnitKey | null>(null);
   if (!base) return <Loading />;
+  // Show the first unit this base can train (the Barracks lists the locked Wisp Drone first).
+  const trainable = units.find((u) => Object.entries(R.UNITS[u].requires).every(([b, l]) => base.levels[b as R.BuildingType] >= (l as number)));
+  const selected = picked ?? trainable ?? units[0] ?? 'trooper';
   const queue = base.training.filter((t) => t.building === building);
   const buildingName = R.BUILDINGS[building]?.name ?? 'Train';
 
@@ -46,10 +50,13 @@ export default function TrainScreen() {
             {queue.map((job) => <QueueItem key={job.id} job={job} />)}
           </>
         )}
+        {building === 'barracks' && onStep(base, 'trainTroopers') && (
+          <TutorialHint>Train 5 Troopers: the amount is already set, so tap Train. They come out one at a time, 3 minutes apart.</TutorialHint>
+        )}
         <SectionTitle>Units</SectionTitle>
         {units.map((u) => (
           <Pressable key={u} onPress={() => setSelected(u)}>
-            <UnitCard base={base} unit={u} selected={u === selected} />
+            <UnitCard base={base} unit={u} selected={u === selected} suggested={u === 'trooper' && onStep(base, 'trainTroopers') ? 5 : 1} />
           </Pressable>
         ))}
       </Screen>
@@ -83,10 +90,10 @@ function QueueItem({ job }: { job: R.TrainJob }) {
   );
 }
 
-function UnitCard({ base, unit, selected }: { base: BaseView; unit: R.UnitKey; selected: boolean }) {
+function UnitCard({ base, unit, selected, suggested }: { base: BaseView; unit: R.UnitKey; selected: boolean; suggested: number }) {
   const now = useNow();
   const qc = useQueryClient();
-  const [qty, setQty] = useState(1);
+  const [qty, setQty] = useState(suggested);
   const train = useMutation({
     mutationFn: () => api.train(unit, qty),
     onSuccess: () => {

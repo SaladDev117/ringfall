@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  cancelBuild, cancelTraining, currentRates, dispatchUnits, queueTraining, res, resolveNestRaid, resolveRaid,
+  cancelBuild, cancelTraining, currentRates, dispatchUnits, finishTraining, queueTraining, res, resolveNestRaid, resolveRaid,
   resolveScout, settleBase, startBuild, startingLevels, upgradeCost, upgradeSeconds, nestGarrison, type BaseState,
 } from '../src';
 
@@ -143,6 +143,20 @@ describe('training', () => {
 
   it('needs the right building', () => {
     expect(queueTraining(base({ resources: res(10_000, 10_000) }), 'rattler', 1, T0, 't')).toEqual({ ok: false, error: 'missing_building' });
+  });
+
+  it('finishes the rest of a batch at once and moves the next batch up', () => {
+    const a = queueTraining(base({ resources: res(10_000, 10_000) }), 'trooper', 5, T0, 't1');
+    if (!a.ok) throw new Error(a.error);
+    const b = queueTraining(a.state, 'trooper', 2, T0, 't2');
+    if (!b.ok) throw new Error(b.error);
+    const settled = settleBase(b.state, T0 + 4 * MIN).state; // 1 of 5 done
+    const f = finishTraining(settled, 't1', T0 + 4 * MIN);
+    if (!f.ok) throw new Error(f.error);
+    expect(f.qty).toBe(4);
+    expect(f.state.units.trooper).toBe(10);
+    expect(f.state.training.map((t) => [t.id, t.startsAt])).toEqual([['t2', T0 + 4 * MIN]]);
+    expect(finishTraining(settled, 'nope', T0)).toEqual({ ok: false, error: 'not_found' });
   });
 });
 

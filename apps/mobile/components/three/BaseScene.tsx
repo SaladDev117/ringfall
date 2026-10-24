@@ -24,6 +24,8 @@ export interface BaseSceneProps {
   seed: string;
   onSelectBuilding: (type: string) => void;
   onSelectArmy?: () => void;
+  /** A building the tutorial wants tapped: it gets a bouncing arrow. */
+  highlight?: string | null;
   dom?: DOMProps;
 }
 
@@ -90,8 +92,44 @@ function Alarm() {
   );
 }
 
+/** The tutorial's pointer: an arrow bobbing over a building, and a ring pulsing out from its base. */
+function Pointer({ position, radius }: { position: [number, number, number]; radius: number }) {
+  const arrow = useRef<THREE.Group>(null);
+  const ring = useRef<THREE.Mesh>(null);
+  useFrame(({ clock }) => {
+    const t = clock.elapsedTime;
+    if (arrow.current) {
+      arrow.current.position.y = position[1] + Math.abs(Math.sin(t * 3)) * 1.6;
+      arrow.current.rotation.y = t * 1.5;
+    }
+    if (ring.current) {
+      const k = (t * 0.7) % 1;
+      ring.current.scale.setScalar(1 + k * 0.6);
+      (ring.current.material as THREE.MeshBasicMaterial).opacity = 0.85 * (1 - k);
+    }
+  });
+  return (
+    <>
+      <group ref={arrow} position={position}>
+        <mesh rotation={[Math.PI, 0, 0]}>
+          <coneGeometry args={[1.2, 2.2, 4]} />
+          <meshBasicMaterial color={PAL.glowWarm} toneMapped={false} />
+        </mesh>
+        <mesh position={[0, 2, 0]}>
+          <cylinderGeometry args={[0.4, 0.4, 2, 6]} />
+          <meshBasicMaterial color={PAL.glowWarm} toneMapped={false} />
+        </mesh>
+      </group>
+      <mesh ref={ring} position={[position[0], 0.2, position[2]]} rotation={[-Math.PI / 2, 0, 0]}>
+        <ringGeometry args={[radius, radius + 0.6, 40]} />
+        <meshBasicMaterial color={PAL.glowWarm} transparent toneMapped={false} depthWrite={false} />
+      </mesh>
+    </>
+  );
+}
+
 export default function BaseScene(props: BaseSceneProps) {
-  const { levels, builds, units, shieldUntil, incomingAt, clockOffset, seed, onSelectBuilding, onSelectArmy } = props;
+  const { levels, builds, units, shieldUntil, incomingAt, clockOffset, seed, onSelectBuilding, onSelectArmy, highlight } = props;
   const [now, setNow] = useState(() => Date.now() + clockOffset);
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now() + clockOffset), 1000);
@@ -108,6 +146,7 @@ export default function BaseScene(props: BaseSceneProps) {
   const army = useMemo(() => homeFormation(JSON.parse(unitsKey)), [unitsKey]);
 
   const labels: LabelSpec[] = [...army.labels];
+  let pointer = null as { position: [number, number, number]; radius: number } | null;
   const scene = visible.map((t) => {
     const level = levels[t] ?? 0;
     const job = builds.find((b) => b.type === t);
@@ -123,6 +162,11 @@ export default function BaseScene(props: BaseSceneProps) {
       labels.push({ id: `job-${t}`, pos: [x, (model ? model.base.height : 2) + 2.5, z], text: `⚒ L${job.toLevel} · ${countdown(job.endsAt - now)}`, tone: 'build' });
     } else if (!model) {
       labels.push({ id: `pad-${t}`, pos: [x, 3.2, z], text: `+ ${BUILDINGS[t].name}`, tone: 'build' });
+    }
+    if (t === highlight) {
+      const top = (model?.base.height ?? 2) + 3.5;
+      pointer = { position: [x, top, z], radius: Math.max(footprint, 3) };
+      labels.push({ id: 'tutorial', pos: [x, top + 5, z], text: `Tap the ${BUILDINGS[t].name}`, tone: 'me' });
     }
     return (
       <group key={t} position={[x, 0, z]} rotation={[0, ry, 0]}>
@@ -157,6 +201,7 @@ export default function BaseScene(props: BaseSceneProps) {
         {army.squads.map((s) => <Squad key={s.key} geo={unitModel(s.key, team)} items={s.items} bob={s.bob} onTap={onSelectArmy} />)}
         {shieldUntil && shieldUntil > now && <ShieldDome radius={WALL_RADIUS + 3} />}
         {incomingAt && incomingAt > now && <Alarm />}
+        {pointer && <Pointer {...pointer} />}
         <Controls target={[0, 0, 1]} distance={100} polar={0.88} minDistance={22} maxDistance={150} panLimit={28} />
         <LabelProjector labels={labels} registry={registry} />
       </Canvas>

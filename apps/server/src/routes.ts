@@ -11,6 +11,7 @@ import * as game from './game.js';
 import { GameError } from './game.js';
 import { bases, pushTokens, users } from './schema.js';
 import * as social from './social.js';
+import * as tutorial from './tutorial.js';
 import { activeSeason, spawnBase } from './world.js';
 
 declare module 'fastify' {
@@ -46,6 +47,7 @@ const schemas = {
   message: z.object({ body: z.string().max(2000).optional(), reportId: uuid.optional() }),
   beforeQuery: z.object({ before: z.coerce.number().int().positive().optional() }),
   reportsQuery: z.object({ before: z.coerce.number().int().positive().optional() }),
+  tutorialClaim: z.object({ shared: z.boolean().optional() }),
 };
 
 export interface RouteDeps {
@@ -159,7 +161,10 @@ export function registerRoutes(app: FastifyInstance, { db, tokens, loginLimiter 
     };
   });
 
-  app.get('/base', authed, (req) => game.withMyBase(db, req.userId, async (ctx) => ({ state: ctx.state, result: await game.baseView(ctx) })));
+  app.get('/base', authed, (req) => game.withMyBase(db, req.userId, async (ctx) => ({
+    state: ctx.state,
+    result: { ...await game.baseView(ctx), tutorial: await tutorial.tutorialView(ctx) },
+  })));
 
   app.patch('/base', authed, async (req) => game.renameBase(db, req.userId, schemas.rename.parse(req.body).name));
 
@@ -183,6 +188,12 @@ export function registerRoutes(app: FastifyInstance, { db, tokens, loginLimiter 
   });
 
   app.post('/armies/:id/recall', authed, async (req) => game.recallArmy(db, req.userId, schemas.idParam.parse(req.params).id));
+
+  app.post('/tutorial/claim', authed, async (req) => tutorial.claimTutorialStep(db, req.userId, schemas.tutorialClaim.parse(req.body ?? {}).shared ?? false));
+
+  app.post('/tutorial/rush', authed, async (req) => tutorial.rushTutorial(db, req.userId));
+
+  app.post('/tutorial/skip', authed, async (req) => tutorial.skipTutorial(db, req.userId));
 
   app.get('/reports', authed, async (req) => game.listReports(db, req.userId, schemas.reportsQuery.parse(req.query).before));
 

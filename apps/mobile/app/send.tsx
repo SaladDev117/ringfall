@@ -9,17 +9,20 @@ import { useNow } from '@/lib/clock';
 import { clock, duration, fmt } from '@/lib/format';
 import { UNIT_ICONS, useBase } from '@/lib/game';
 import { colors } from '@/lib/theme';
+import { TutorialHint, onStep } from '@/lib/tutorial';
 import { Button, Card, Divider, ErrorText, Loading, Row, Screen, SectionTitle, Stepper, T } from '@/lib/ui';
 
 export default function SendScreen() {
   const params = useLocalSearchParams<{
     kind: 'base' | 'nest'; id: string; name: string; x: string; y: string; level?: string; mission?: 'raid' | 'scout';
+    /** Troopers to pre-pick (the tutorial's first raid). */
+    troopers?: string;
   }>();
   const { data: base } = useBase();
   const now = useNow();
   const qc = useQueryClient();
   const [mission, setMission] = useState<'raid' | 'scout'>(params.mission === 'scout' ? 'scout' : 'raid');
-  const [picked, setPicked] = useState<R.Army>({});
+  const [picked, setPicked] = useState<R.Army>(() => (params.troopers ? { trooper: Number(params.troopers) } : {}));
   const launch = useMutation({
     mutationFn: () => api.launch({ kind: params.kind, id: params.id }, mission, picked),
     onSuccess: () => {
@@ -49,6 +52,10 @@ export default function SendScreen() {
         <T mono faint size={12}>{R.formatCoords(target)} · {R.distance(base, target).toFixed(1)} tiles away</T>
         {isNest && <T muted size={13} style={{ marginTop: 6 }}>Blight Nests only give up their loot when you clear them completely.</T>}
       </Card>
+
+      {isNest && onStep(base, 'raidNest') && (
+        <TutorialHint>Your Troopers are picked. Check the win chance, then tap Launch. The march takes a while, but the tutorial can speed it up.</TutorialHint>
+      )}
 
       {!isNest && (
         <Row style={{ gap: 8 }}>

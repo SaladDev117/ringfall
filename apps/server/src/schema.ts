@@ -1,6 +1,6 @@
 import type { Army, BattleResult, BuildJob, BuildingLevels, Resources, TrainJob } from '@ringfall/rules';
 import { sql } from 'drizzle-orm';
-import { boolean, index, integer, jsonb, pgTable, primaryKey, serial, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import { boolean, index, integer, jsonb, pgTable, primaryKey, serial, smallint, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 
 const ts = (name: string) => timestamp(name, { withTimezone: true, mode: 'date' });
 
@@ -12,6 +12,10 @@ export const users = pgTable('users', {
   recoveryEmail: text('recovery_email'),
   /** Updated at most every few minutes, for "last seen" on friends lists. */
   lastSeenAt: ts('last_seen_at'),
+  /** Tutorial steps claimed so far; `TUTORIAL_DONE` once finished or skipped. */
+  tutorialStep: smallint('tutorial_step').notNull().default(0),
+  /** Free tutorial speed-ups already used, as `TUTORIAL_RUSH` bit flags. */
+  tutorialRushes: smallint('tutorial_rushes').notNull().default(0),
   createdAt: ts('created_at').notNull().defaultNow(),
 }, (t) => [
   uniqueIndex('users_username_lower_idx').on(sql`lower(${t.username})`),

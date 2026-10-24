@@ -231,13 +231,29 @@ export function cancelTraining(state: BaseState, jobId: string, now: number): Ac
   for (const r of RESOURCES) refund[r] = Math.floor(refund[r]);
   s.resources = addResources(s.resources, refund);
   s.training = s.training.filter((j) => j.id !== jobId);
-  // Re-chain the building's queue so nothing waits on the cancelled batch. A batch already under way keeps its times.
+  rechain(s, job.building, now);
+  return { ok: true, state: s, refund };
+}
+
+/** Completes the rest of a training batch right now (the tutorial's free speed-up). Later batches move up. */
+export function finishTraining(state: BaseState, jobId: string, now: number): ActionResult<{ qty: number }> {
+  const job = state.training.find((j) => j.id === jobId);
+  if (!job) return { ok: false, error: 'not_found' };
+  const s = cloneBase(state);
+  const qty = job.qty - job.done;
+  s.units[job.unit] = (s.units[job.unit] ?? 0) + qty;
+  s.training = s.training.filter((j) => j.id !== jobId);
+  rechain(s, job.building, now);
+  return { ok: true, state: s, qty };
+}
+
+/** Re-chains a building's queue after a batch leaves it, so nothing waits on it. A batch already under way keeps its times. */
+function rechain(s: BaseState, building: TrainingBuilding, now: number): void {
   let cursor = now;
-  for (const j of s.training.filter((x) => x.building === job.building).sort((a, b) => a.startsAt - b.startsAt)) {
+  for (const j of s.training.filter((x) => x.building === building).sort((a, b) => a.startsAt - b.startsAt)) {
     if (j.done === 0 && j.startsAt > cursor) j.startsAt = cursor;
     cursor = Math.max(cursor, jobEndsAt(j));
   }
-  return { ok: true, state: s, refund };
 }
 
 /** Takes units out of the base to send them somewhere. */

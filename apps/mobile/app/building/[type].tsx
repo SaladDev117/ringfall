@@ -8,6 +8,7 @@ import { useNow } from '@/lib/clock';
 import { duration, fmt } from '@/lib/format';
 import { BUILDING_INFO, RESOURCE_ICONS, effectAt, liveResources, useBase } from '@/lib/game';
 import { colors } from '@/lib/theme';
+import { TutorialHint, onStep } from '@/lib/tutorial';
 import { Button, Card, Countdown, Divider, ErrorText, Loading, ProgressBar, Row, Screen, SectionTitle, T, confirm } from '@/lib/ui';
 
 const TRAINS_AT: Partial<Record<R.BuildingType, R.TrainingBuilding>> = {
@@ -56,6 +57,13 @@ export default function BuildingScreen() {
         </View>
       </Row>
       <T muted>{info.blurb}</T>
+      {((type === 'commandCenter' && onStep(base, 'upgradeCommand')) || (type === 'alloyExtractor' && onStep(base, 'upgradeAlloy'))) && !job && (
+        <TutorialHint>
+          {blocker
+            ? `${blocker} It’s on its way: come back when it finishes.`
+            : 'Tap Upgrade below. Upgrades take time, and you can carry on with other things while the builders work.'}
+        </TutorialHint>
+      )}
 
       <Card>
         <Row style={{ justifyContent: 'space-between' }}>

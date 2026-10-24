@@ -18,6 +18,7 @@ export interface ArmyView {
   mission: 'raid' | 'scout';
   status: 'outbound' | 'returning';
   target: string;
+  targetKind: 'base' | 'nest';
   targetCoords: string;
   units: Army;
   loot: Resources;
@@ -64,6 +65,19 @@ export interface BaseView {
   incoming: IncomingView[];
   unreadReports: number;
   social: { friendRequests: number; unreadMessages: number };
+  /** Null once the tutorial is finished or skipped. */
+  tutorial: TutorialView | null;
+}
+
+export interface TutorialView {
+  /** Index into `R.TUTORIAL`. */
+  step: number;
+  /** Done: the reward can be claimed. */
+  done: boolean;
+  /** The free speed-up on offer, and when that thing would otherwise finish. */
+  rush: { kind: 'training' | 'march'; at: number } | null;
+  nest: { id: string; name: string; x: number; y: number; level: number } | null;
+  reportId: string | null;
 }
 
 export type PlaceView =
